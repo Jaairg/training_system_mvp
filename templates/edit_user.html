@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>EDIT USER INFORMATION</title>
+</head>
+<body>
+<!-- Using bootstrap styling to create a card with alignment attributes and place the information inside -->
+    <div class = "min-vh-100 d-flex flex-column align-items-center">
+        <div class="container text-center mt-5">
+            <div class="card">
+                <div class="card-body p-3 mb-5 rounded">
+                    <h2 class = "card-title"> User name: {{ profile.name }}</h2>
+                </div>
+            </div>
+        </div>
+    </div>
+<!-- HTML form that will send data using the POST method -->
+<form method="POST">
+    {% csrf_token %}
+    <!-- Renders the form fields (from Django) as paragraphs -->
+    {{ form.as_p }}
+    <!-- Creates the button -->
+    <button type="submit" class="btn btn-success">SAVE ALL</button>
+</form>
+
+</body>
+</html>

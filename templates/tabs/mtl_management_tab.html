@@ -1,0 +1,21 @@
+<h2> MTL tasks </h2>
+<table class="table table-bordered table-striped">
+    <thead>
+        <tr>
+            <th scope="col">Task number</th>
+            <th scope="col">Task name</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for task in workcenter_tasks %}
+            <tr>
+                <td>{{ task.cfetp.task_number }}</td>
+                <td>{{ task.cfetp.cfetp_name }}</td>
+            </tr>
+        {% endfor %}
+    </tbody>
+</table>
+
+<a href="{% url 'add_tasks' %}" class="btn btn-primary">
+    <button type="button" class="btn btn-primary">Add task</button>
+</a>

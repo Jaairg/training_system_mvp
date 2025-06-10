@@ -1,0 +1,21 @@
+<h2> Workcenter members in {{ profile.workcenter.workcenter_name }}</h2>
+<table class = "table table-bordered table-striped">
+    <thead>
+        <tr>
+            <th scope="col">Name</th>
+            <th scope="col">AFSC Code</th>
+            <th scope="col">Role</th>
+            <th scope="col">Rank</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for user in workcenter_members %}
+            <tr>
+                <td><a href="{% url 'edit_user_info' user_id=user.profile_id %}"> {{ user.name }} </a> </td>
+                <td>{{ user.full_afsc }}</td>
+                <td>{{ user.role }}</td>
+                <td>{{ user.rank.rank_name }}</td>
+            </tr>
+        {% endfor %}
+    </tbody>
+</table>

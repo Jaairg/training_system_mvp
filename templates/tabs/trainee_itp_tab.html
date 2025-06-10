@@ -1,0 +1,68 @@
+    <div class = "min-vh-100 d-flex flex-column align-items-center">
+        <div class="container text-center mt-5">
+            <div class="card">
+                <div class="card-body p-3 mb-5 rounded">
+                    <h1 class = "card-title"> Welcome, {{ profile.name }}</h1>
+                    <h2 class = "card-subtitle"> Workcenter: {{ profile.workcenter.workcenter_name }}</h2>
+                    <h3 class = "card-subtitle"> AFSC: {{ profile.full_afsc }} - {{ profile.get_skill_level_display }}</h3>
+                </div>
+            </div>
+        </div>
+
+    <!--Using Bootstrap styled tables to display records-->
+    <table class = "table table-bordered table-striped">
+        <thead>
+            <tr>
+                <!-- Table headers -->
+                <th scope="col">Trainer</th>
+                <th scope="col">Task Number</th>
+                <th scope="col">Task</th>
+                <th scope="col">Start date</th>
+                <th scope="col">Completion date</th>
+                <th scope="col">Trainee Signature</th>
+            </tr>
+        </thead>
+        <tbody>
+        <!-- Loop through each training record (itp) using jinja syntax -->
+            {% for itp in itps %}
+                <tr>
+                    <td>{{ itp.trainer.name }}</td>
+                    <td>{{ itp.mtl.cfetp.task_number }}</td>
+                    <td>{{ itp.mtl.cfetp.cfetp_name}}</td>
+                    <!-- start_date formatted -->
+                    <td>{{ itp.start_date|date:"M d, Y" }}</td>
+                    <!-- Show completion date or 'In Progress' if not completed -->
+                    <td>
+                        {% if itp.trainer_signature and itp.trainee_signature == False %}
+                            <span class="badge bg-success">Trainer signed task</span>
+                            <p><span class="badge bg-warning text-dark">Awaiting your acknowledgment</span></p>
+
+                            {% elif itp.trainer_signature and   itp.trainee_signature == True %}
+                             {{itp.completion_date}}
+
+                            {% else %}
+                            {{itp.completion_date|default:"In progress"}}
+                        {% endif %}
+                    <td>
+                        <form method="POST">
+                            {% csrf_token %}
+
+                            {% if itp.trainee_signature == False and itp.trainer_signature == True%}
+                                <div class="form-check form-check-inline">
+                                    <input class="form-check-input" type="checkbox" id="signoffCheckbox{{ itp.itp_id }}" required>
+                                    <label class="form-check-label" for="signoffCheckbox{{ itp.itp_id }}"> </label>
+                                </div>
+
+                                <input type="hidden" name="itp" value="{{ itp.itp_id }}">
+                                <button type="submit" class="btn btn-primary btn-sm">Confirm</button>
+
+                            {% elif itp.trainee_signature == True%}
+                                <span class="badge bg-success">Completed</span>
+                            {% endif %}
+                        </form>
+                    </td>
+                </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    </div>

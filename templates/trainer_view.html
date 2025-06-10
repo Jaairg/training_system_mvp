@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <meta charset="UTF-8">
+    <title>TRAINING RECORDS</title>
+</head>
+<body>
+
+<div class="container-fluid">
+    <div class="row flex-nowrap">
+        <div class="col-auto col-md-3 col-xl-2 px-sm-2 px-0 bg-dark">
+            <div class="d-flex flex-column align-items-center align-items-sm-start px-3 pt-2 text-white min-vh-100">
+                <a href="/" class="d-flex align-items-center pb-3 mb-md-0 me-md-auto text-white text-decoration-none">
+                    <span class="fs-5 d-none d-sm-inline">Menu</span>
+                </a>
+                <ul class="nav nav-pills flex-column mb-sm-auto mb-0 align-items-center align-items-sm-start" id="menu">
+                    <li class="nav-item">
+                        <a href="?tab=dashboard" class="nav-link align-middle px-0">
+                            <i class="fs-4 bi-house"></i> <span class="ms-1 d-none d-sm-inline">Dashboard</span>
+                        </a>
+                    </li>
+                    <li>
+                        <a href="?tab=my_trainees" data-bs-toggle="collapse" class="nav-link px-0 align-middle">
+                            <i class="fs-4 bi-speedometer2"></i> <span class="ms-1 d-none d-sm-inline">My trainees</span> </a>
+                    </li>
+                    <li>
+                        <a href="?tab=my_itps" data-bs-toggle="collapse" class="nav-link px-0 align-middle">
+                            <i class="fs-4 bi-speedometer2"></i> <span class="ms-1 d-none d-sm-inline">My ITPs</span> </a>
+                    </li>
+
+                </ul>
+                <div class="dropdown pb-4">
+                    <form action="{% url 'logout' %}" method="post">
+                          {% csrf_token %}
+                         <button type="submit" class="btn btn-danger">Log Out</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+        <div class="col">
+            {% if active_tab == 'dashboard'%}
+                {% include 'tabs/dashboard_tab.html' %}
+            {% elif active_tab == 'my_trainees'%}
+                {% include 'tabs/itp_form_tab.html' %}
+            {% elif active_tab == 'my_itps' %}
+                {% if trainer_itp_exist %}
+                    {% include 'tabs/trainee_itp_tab.html' %}
+                {% else %}
+                    <h2> You don't have current ITPs</h2>
+                {% endif %}
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+</body>
+</html>
