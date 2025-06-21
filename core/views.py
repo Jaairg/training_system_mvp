@@ -4,21 +4,21 @@ from django.shortcuts import render, redirect
 from core.forms import *
 from datetime import datetime
 
-def redirect_to_custom_page(profile):
+def redirect_to_custom_page(profile, trainee_id):
     if profile.role.role_name == "Trainer":
-        return redirect('/trainer_view/?tab=my_trainees')  # Redirect to trainer dashboard once form it's saved
+        return redirect(f'/trainer/?tab=trainee_itp&user_id={trainee_id}')  # Redirect to trainer dashboard once form it's saved
     elif profile.role.role_name == "Supervisor":
-        return redirect('/supervisor_view/?tab=my_trainees')
+        return redirect(f'/supervisor/?tab=trainee_itp&user_id={trainee_id}')
     return HttpResponse("Unauthorized", status=401)
 
-def sign_itp(itp_id, profile):
+def sign_itp(itp_id, profile, trainee_id):
     itp = ITP.objects.get(pk=itp_id)  # Identify the specific ITP being updated
     if profile == itp.trainer:  # Securing the action so only the trainer can sign
         itp.trainer_signature = True  # Updates the trainer_signature value once the checkbox is marked
         if not itp.completion_date:
             itp.completion_date = datetime.now()
         itp.save()  # Commit the information to the database
-        return redirect_to_custom_page(profile)
+        return redirect_to_custom_page(profile, trainee_id)
     return None
 
 def tabs_redirect(valid_tabs, request):
@@ -26,6 +26,28 @@ def tabs_redirect(valid_tabs, request):
     if tab not in valid_tabs:
         tab ='dashboard'
     return tab
+
+def get_trainee_itp(request, profile):
+    trainee_itp = None
+    trainee = None
+    try:
+        trainee_id = int(request.GET.get('user_id'))
+    except (TypeError, ValueError):
+        trainee_id = None
+    if trainee_id is not None:
+        trainee = Users.objects.filter(pk=trainee_id).first()
+        if trainee:
+            trainee_itp=ITP.objects.filter(trainer=profile, trainee__profile_id=trainee.profile_id)
+    return trainee, trainee_itp, trainee_id
+
+def validate_trainee_itp(request, profile):
+    trainee, trainee_itp, trainee_id = get_trainee_itp(request, profile)
+    if 'user_id' in request.GET:
+        if trainee_id is None:
+            return HttpResponse("Invalid or missing trainee ID.", status=400)
+        if not trainee or not trainee_itp:
+            return HttpResponse("Trainee or ITP not found.", status=400)
+    return trainee, trainee_itp, trainee_id
 
 @login_required
 def trainee_view(request):
@@ -46,12 +68,12 @@ def trainee_view(request):
             if itp.trainer_signature is True: # If trainer signature in the form received is true will allow to update the trainee signature
                 itp.trainee_signature = True
                 itp.save()
-                return redirect("/trainee_view/?tab=my_itps")
+                return redirect("/trainee/?tab=my_itps")
 
     return render(request, 'trainee_view.html', {
         'profile': profile,
         'active_tab': tab,
-        'itps': trainee_itps
+        'itps': trainee_itps,
     })
 
 @login_required
@@ -61,23 +83,31 @@ def trainer_view(request):
     if profile.role.role_name != 'Trainer':
         return HttpResponse("You are not authorized to access this page")
 
-    trainer_view = ITP.objects.filter(trainer=profile) # Get the information associated to this trainer
+    trainees_list = Users.objects.filter(profile_id__in=ITP.objects.filter(trainer=profile).values_list('trainee_id', flat=True))
+
     trainer_itp_exist = ITP.objects.filter(trainee=profile).exists() # It checks if the current user  (profile) is listed as trainee in any ITP
     trainer_itps = ITP.objects.filter(trainee=profile) # Get the trainer ITPs
 
-    valid_tabs =['dashboard', 'my_trainees', 'my_itps']
+    result = validate_trainee_itp(request, profile)
+    if isinstance(result, HttpResponse):
+        return result
+    trainee, trainee_itp, trainee_id = result
+
+    valid_tabs =['dashboard', 'my_trainees', 'my_itps', 'trainee_itp']
     tab = tabs_redirect(valid_tabs, request)
 
     if request.method == "POST":
         itp_id = request.POST.get('itp') # Get the submitted ITP ID
-        return sign_itp(itp_id, profile)
+        return sign_itp(itp_id, profile, trainee_id)
 
     return render(request, 'trainer_view.html',{
         'active_tab': tab,
         'profile': profile,
-        'trainer_info': trainer_view,
         'trainer_itp_exist': trainer_itp_exist,
-        'itps': trainer_itps
+        'itps': trainer_itps,
+        'my_trainees_list': trainees_list,
+        'trainee_itp': trainee_itp,
+        'trainee': trainee
     })
 
 @login_required()
@@ -87,16 +117,20 @@ def supervisor_view(request):
     if profile.role.role_name != 'Supervisor':
         return HttpResponse("You are not authorized to access this page")
 
-    valid_tabs =['dashboard', 'my_trainees', 'my_itps','workcenter_members', 'mtl_management']
+    valid_tabs =['dashboard', 'my_trainees', 'trainee_itp', 'my_itps','workcenter_members', 'mtl_management']
     tab = tabs_redirect(valid_tabs, request)
 
+    trainees_list = Users.objects.filter(profile_id__in=ITP.objects.filter(trainer=profile).values_list('trainee_id', flat=True))
 
-    trainer_info = ITP.objects.filter(trainer=profile)
+    result = validate_trainee_itp(request, profile)
+    if isinstance(result, HttpResponse):
+        return result
+    trainee, trainee_itp, trainee_id = result
+
     supervisor_itp_exist = ITP.objects.filter(trainee=profile).exists()
     supervisor_itps = ITP.objects.filter(trainee=profile)
     workcenter_members = Users.objects.filter(workcenter=profile.workcenter).exclude(pk=profile.pk)
     workcenter_mtl = MTL.objects.filter(workcenter=profile.workcenter)
-
 
     if request.method == "POST":
         itp_id = request.POST.get('itp') # Get the submitted ITP ID
@@ -105,7 +139,9 @@ def supervisor_view(request):
     return render(request, 'supervisor_view.html',{
         'profile': profile,
         'active_tab': tab,
-        'trainer_info': trainer_info,
+        'my_trainees_list': trainees_list,
+        'trainee_itp': trainee_itp,
+        'trainee': trainee,
         'supervisor_itp_exists': supervisor_itp_exist,
         'itps': supervisor_itps,
         'workcenter_members' : workcenter_members,
@@ -121,7 +157,6 @@ def custom_redirect_view(request):
             return redirect('trainer_view') # If user is Trainer and trying to access this redirects to trainer path
         else:
             return redirect('supervisor_view')
-
     else:
         return redirect('login')
 
@@ -166,7 +201,7 @@ def add_tasks(request):
             mtl = form.save(commit=False)
             mtl.workcenter = profile.workcenter
             mtl.save()
-            return redirect('/supervisor_view/?tab=mtl_management')
+            return redirect('/supervisor/?tab=mtl_management')
 
     return render(request, 'mtl_form.html',{
         'form':form
@@ -202,7 +237,7 @@ def edit_user_view(request, user_id):
                 user.workcenter = profile.workcenter
                 user.afsc = user_to_edit.afsc
                 user.save()
-                return redirect('/supervisor_view/?tab=workcenter_members')
+                return redirect('/supervisor/?tab=workcenter_members')
 
     return render(request, 'edit_user.html', {
         'form': form,

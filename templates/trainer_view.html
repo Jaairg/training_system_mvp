@@ -42,7 +42,9 @@
             {% if active_tab == 'dashboard'%}
                 {% include 'tabs/dashboard_tab.html' %}
             {% elif active_tab == 'my_trainees'%}
-                {% include 'tabs/itp_form_tab.html' %}
+                {% include 'tabs/my_trainees_list_tab.html'%}
+            {% elif active_tab == 'trainee_itp' %}
+                {% include 'tabs/itp_tab.html' %}
             {% elif active_tab == 'my_itps' %}
                 {% if trainer_itp_exist %}
                     {% include 'tabs/trainee_itp_tab.html' %}
