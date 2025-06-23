@@ -5,9 +5,10 @@ from core.forms import *
 from datetime import datetime
 
 def redirect_to_custom_page(profile, trainee_id):
-    if profile.role.role_name == "Trainer":
+    profile_role = profile.role.role_name
+    if profile_role == "Trainer":
         return redirect(f'/trainer/?tab=trainee_itp&user_id={trainee_id}')  # Redirect to trainer dashboard once form it's saved
-    elif profile.role.role_name == "Supervisor":
+    elif profile_role == "Supervisor":
         return redirect(f'/supervisor/?tab=trainee_itp&user_id={trainee_id}')
     return HttpResponse("Unauthorized", status=401)
 
@@ -55,7 +56,8 @@ def trainee_view(request):
 
     trainee_itps = ITP.objects.filter(trainee=profile)  # only ITPs where this user is the trainee
 
-    if profile.role.role_name != 'Trainee':
+    profile_role = profile.role.role_name
+    if profile_role != 'Trainee':
         return HttpResponse("You are not authorized to access this page")
 
     valid_tabs =['dashboard', 'my_itps']
@@ -65,7 +67,7 @@ def trainee_view(request):
         itp_id = request.POST.get('itp')
         itp = ITP.objects.get(itp_id=itp_id)
         if profile == itp.trainee:
-            if itp.trainer_signature is True: # If trainer signature in the form received is true will allow to update the trainee signature
+            if itp.trainer_signature: # If trainer signature in the form received is true will allow to update the trainee signature
                 itp.trainee_signature = True
                 itp.save()
                 return redirect("/trainee/?tab=my_itps")
@@ -80,7 +82,8 @@ def trainee_view(request):
 def trainer_view(request):
     profile = request.user.profile
 
-    if profile.role.role_name != 'Trainer':
+    profile_role = profile.role.role_name
+    if profile_role != 'Trainer':
         return HttpResponse("You are not authorized to access this page")
 
     trainees_list = Users.objects.filter(profile_id__in=ITP.objects.filter(trainer=profile).values_list('trainee_id', flat=True))
@@ -114,7 +117,8 @@ def trainer_view(request):
 def supervisor_view(request):
     profile = request.user.profile
 
-    if profile.role.role_name != 'Supervisor':
+    profile_role = profile.role.role_name
+    if profile_role != 'Supervisor':
         return HttpResponse("You are not authorized to access this page")
 
     valid_tabs =['dashboard', 'my_trainees', 'trainee_itp', 'my_itps','workcenter_members', 'mtl_management']
@@ -134,7 +138,7 @@ def supervisor_view(request):
 
     if request.method == "POST":
         itp_id = request.POST.get('itp') # Get the submitted ITP ID
-        return sign_itp(itp_id, profile)
+        return sign_itp(itp_id, profile, trainee_id)
 
     return render(request, 'supervisor_view.html',{
         'profile': profile,
@@ -150,10 +154,10 @@ def supervisor_view(request):
 
 def custom_redirect_view(request):
     if request.user.is_authenticated:
-        role = request.user.profile.role.role_name #Check the role of the user request
-        if role == "Trainee":
+        profile_role = request.user.profile.role.role_name #Check the role of the user request
+        if profile_role == "Trainee":
             return redirect('trainee_view') # If user is Trainee and trying to access this redirects to my_itps path
-        elif role == "Trainer":
+        elif profile_role == "Trainer":
             return redirect('trainer_view') # If user is Trainer and trying to access this redirects to trainer path
         else:
             return redirect('supervisor_view')
@@ -163,7 +167,8 @@ def custom_redirect_view(request):
 def create_form_view(request):
     profile = request.user.profile
 
-    if profile.role.role_name == "Trainee": # If a user is trainee try to access it gets blocked
+    profile_role = profile.role.role_name
+    if profile_role == "Trainee": # If a user is trainee try to access it gets blocked
         return HttpResponse("You are not authorized to access this page")
 
     # Create a blank form and send it to template
@@ -181,15 +186,18 @@ def create_form_view(request):
             itp.trainer = request.user.profile # Set trainer
             itp.trainer_signature = False
             itp.trainee_signature = False
-            itp.save() # Save the form
-            return redirect_to_custom_page(profile)
+            if profile_role == "Trainer":
+                return redirect('/trainer/?tab=my_trainees')
+            elif profile_role == "Supervisor":
+                return redirect('/supervisor/?tab=my_trainees')
 
     return render(request, 'create_form.html', {'form': form})
 
 def add_tasks(request):
     profile = request.user.profile
 
-    if profile.role.role_name != 'Supervisor':
+    profile_role = profile.role.role_name
+    if profile_role != 'Supervisor':
         return HttpResponse("You are not authorized to access this page")
 
     form = MTLForm(request.POST, workcenter=profile.workcenter)
@@ -210,7 +218,8 @@ def add_tasks(request):
 def edit_user_view(request, user_id):
     profile = request.user.profile
 
-    if profile.role.role_name != 'Supervisor':
+    profile_role = profile.role.role_name
+    if profile_role != 'Supervisor':
         return HttpResponse("You are not authorized to access this page")
 
     user_to_edit = Users.objects.get(pk=user_id)
