@@ -117,7 +117,7 @@ class ITP(models.Model):
     trainee = models.ForeignKey('Users', on_delete=models.SET_NULL, null=True, related_name='trainee_itps')
     trainer = models.ForeignKey('Users', on_delete=models.SET_NULL, related_name='itp_trainer_set', blank=True, null=True)
     mtl = models.ForeignKey('MTL', models.DO_NOTHING, null=True)
-    start_date = models.DateField(null=False)
+    start_date = models.DateField(blank=True, null=True)
     completion_date = models.DateField(blank=True, null=True)
     trainer_signature = models.BooleanField(default=False, blank=True, null=True)
     trainee_signature = models.BooleanField(default=False, blank=True, null=True)
