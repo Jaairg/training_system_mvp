@@ -127,7 +127,7 @@ class ITP(models.Model):
         db_table = 'ITP'
 
     def __str__(self):
-        return (f"{self.mtl.workcenter.workcenter_name} -- {self.mtl.cfetp.task_number} -- {self.mtl.cfetp.cfetp_name}"
+        return (f"{self.trainee.name} -- {self.mtl.workcenter.workcenter_name} -- {self.mtl.cfetp.task_number} -- {self.mtl.cfetp.cfetp_name}"
                 f" -- {self.trainer_signature} -- {self.trainee_signature}")
 
 

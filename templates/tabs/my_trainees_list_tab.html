@@ -1,0 +1,43 @@
+<div class = "min-vh-100 d-flex flex-column align-items-center">
+    <div class="container text-center mt-5">
+        <div class="card">
+            <div class="card-body p-3 mb-5 rounded">
+                <h1 class = "card-title"> Welcome, {{ profile.name }}</h1>
+                <h2 class = "card-subtitle"> Your assigned trainees</h2>
+                <h3 class = "card-subtitle"> Workcenter: {{ profile.workcenter.workcenter_name }} </h3>
+            </div>
+        </div>
+    </div>
+    <table class = "table table-bordered table-striped">
+    <thead>
+        <tr>
+            <th scope="col">Name</th>
+            <th scope="col">AFSC Code</th>
+            <th scope="col">Role</th>
+            <th scope="col">Rank</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for user in my_trainees_list%}
+            <tr>
+                <td> <a href="?tab=trainee_itp&user_id={{ user.profile_id }}"> {{ user.name }} </a> </td>
+                <td>{{ user.full_afsc }}</td>
+                <td>{{ user.role }}</td>
+                <td>{{ user.rank.rank_name }}</td>
+            </tr>
+        {% endfor %}
+    </tbody>
+</table>
+
+{% if active_tab == 'trainee_itp' %}
+    {% if trainee and trainee_itp%}
+        {% include 'tabs/itp_tab.html' with trainee_itp=trainee_itp trainee=trainee%}
+    {% else %}
+        <p> NO ITP FOUND FOR THE SELECTED TRAINEE</p>
+    {% endif %}
+{% endif %}
+
+<button onclick="location.href='{% url 'create_form' %}'" class="btn btn-primary">Create ITP</button>
+
+</div>
+
