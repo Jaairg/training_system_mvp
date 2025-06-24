@@ -21,8 +21,9 @@ class ITPForm(ModelForm):
         if trainee.skill_level < mtl.cfetp.min_skill_level:
             errors['mtl'] = ['The selected task require a higher skill level than the trainee currently has. '
                                   'Please select an appropriate MTL or review the trainees skill level']
-        if start_date < timezone.now().date():
-            errors['start_date'] = ['The start date must be today or a future date. Past dates are not allowed']
+        if start_date is not None:
+            if start_date < timezone.now().date():
+                errors['start_date'] = ['The start date must be today or a future date. Past dates are not allowed']
         if errors:
             raise ValidationError(errors)
 

@@ -1,5 +1,6 @@
 from django.contrib.auth.decorators import login_required
-from django.http import HttpResponse
+from django.contrib import messages
+from django.http import HttpResponse, HttpResponseForbidden
 from django.shortcuts import render, redirect
 from core.forms import *
 from datetime import datetime
@@ -21,6 +22,33 @@ def sign_itp(itp_id, profile, trainee_id):
         itp.save()  # Commit the information to the database
         return redirect_to_custom_page(profile, trainee_id)
     return None
+
+def update_start_date(request, profile, trainee_id):
+    try:
+        itp_id = int(request.POST.get('itp'))
+    except(TypeError, ValueError):
+        messages.error(request, "Start date can't be changed because the ITP doesn't exist")
+        return redirect_to_custom_page(profile, trainee_id)
+    itp = ITP.objects.filter(pk=itp_id).first()
+    if not itp:
+        messages.error(request, "Start date can't be changed because the ITP doesn't exist")
+        return redirect_to_custom_page(profile, trainee_id)
+    date_str = request.POST.get('selected_date')
+    if not date_str:
+        messages.error(request,"Start date cannot be empty")
+        return redirect_to_custom_page(profile, trainee_id)
+    try:
+        parsed_date = datetime.strptime(date_str, '%Y-%m-%d').date()
+    except ValueError:
+        messages.error(request, "Invalid date format")
+        return redirect_to_custom_page(profile, trainee_id)
+    if profile == itp.trainer:
+        itp.start_date = parsed_date
+        itp.save()
+        messages.success(request, "Date successfully updated")
+        return redirect_to_custom_page(profile, trainee_id)
+    else:
+        return HttpResponseForbidden("You are not authorized to update the date", status=403)
 
 def tabs_redirect(valid_tabs, request):
     tab = request.GET.get('tab', 'dashboard') # Dashboard is the default page
@@ -84,7 +112,7 @@ def trainer_view(request):
 
     profile_role = profile.role.role_name
     if profile_role != 'Trainer':
-        return HttpResponse("You are not authorized to access this page")
+        return HttpResponseForbidden("You are not authorized to access this page")
 
     trainees_list = Users.objects.filter(profile_id__in=ITP.objects.filter(trainer=profile).values_list('trainee_id', flat=True))
 
@@ -99,9 +127,12 @@ def trainer_view(request):
     valid_tabs =['dashboard', 'my_trainees', 'my_itps', 'trainee_itp']
     tab = tabs_redirect(valid_tabs, request)
 
-    if request.method == "POST":
+    if 'update_signature' in request.POST:
         itp_id = request.POST.get('itp') # Get the submitted ITP ID
         return sign_itp(itp_id, profile, trainee_id)
+
+    if 'update_start_date' in request.POST:
+        return update_start_date(request, profile, trainee_id)
 
     return render(request, 'trainer_view.html',{
         'active_tab': tab,
@@ -136,9 +167,12 @@ def supervisor_view(request):
     workcenter_members = Users.objects.filter(workcenter=profile.workcenter).exclude(pk=profile.pk)
     workcenter_mtl = MTL.objects.filter(workcenter=profile.workcenter)
 
-    if request.method == "POST":
+    if 'update_signature' in request.POST:
         itp_id = request.POST.get('itp') # Get the submitted ITP ID
         return sign_itp(itp_id, profile, trainee_id)
+
+    if 'update_start_date' in request.POST:
+        return update_start_date(request, profile, trainee_id)
 
     return render(request, 'supervisor_view.html',{
         'profile': profile,
@@ -186,6 +220,7 @@ def create_form_view(request):
             itp.trainer = request.user.profile # Set trainer
             itp.trainer_signature = False
             itp.trainee_signature = False
+            itp.save()
             if profile_role == "Trainer":
                 return redirect('/trainer/?tab=my_trainees')
             elif profile_role == "Supervisor":
