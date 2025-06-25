@@ -68,18 +68,22 @@
                     <td>
                         <form method="POST">
                             {% csrf_token %}
-
                             {% if not itp.trainer_signature %}
                                 <input type="hidden" name="update_signature">
                                 <div class="form-check form-check-inline">
-                                    <input class="form-check-input" type="checkbox" id="signoffCheckbox{{ itp.itp_id }}">
-                                    <label class="form-check-label" for="signoffCheckbox{{ itp.itp_id }}"> </label>
+                                    <label>
+                                        <input name="clicked_box" class="form-check-input" type="checkbox" value="sign_off_check_box{{ itp.itp_id }}">
+                                    </label>
                                 </div>
 
                                 <input type="hidden" name="itp" value="{{ itp.itp_id }}">
                                 <button type="submit" class="btn btn-primary btn-sm">Confirm</button>
                             {% else%}
-                                <span class="badge bg-success">Signed</span>
+                                {% if itp.trainer_initials %}
+                                    <span class="badge bg-success">{{ itp.trainer_initials }}</span>
+                                {% else %}
+                                    <span class="badge bg-success">Signed</span>
+                                {% endif %}
                             {% endif %}
                         </form>
                     </td>
