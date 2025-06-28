@@ -1,3 +1,6 @@
+{% extends 'base.html' %}
+
+{% block header %}
 <div class = "min-vh-100 d-flex flex-column align-items-center">
     <div class="container text-center mt-5">
         <div class="card">
@@ -8,19 +11,9 @@
             </div>
         </div>
     </div>
+{% endblock %}
 
-{% if messages %}
-    <div id="message_container">
-        {% for message in messages %}
-            {% if message.tags == 'error' %}
-                <span class="badge bg-danger">{{ message }}</span>
-            {% else %}
-                <span class="badge bg-success">{{ message }}</span>
-            {% endif %}
-        {% endfor %}
-    </div>
-{% endif %}
-
+{% block content %}
     <table class = "table table-bordered table-striped">
         <thead>
             <tr>
@@ -53,11 +46,11 @@
                     </form>
                     </td>
                     <td>
-                        {% if itp.trainer_signature and itp.trainee_signature == False %}
+                        {% if itp.trainer_signature and not itp.trainee_signature%}
                             <span class="badge bg-success">You signed</span>
                             <p><span class="badge bg-warning text-dark">Awaiting trainee acknowledgment</span></p>
 
-                        {% elif itp.trainer_signature and itp.trainee_signature == True %}
+                        {% elif itp.trainer_signature and itp.trainee_signature %}
                              {{itp.completion_date}}
 
                         {% else %}
@@ -68,18 +61,22 @@
                     <td>
                         <form method="POST">
                             {% csrf_token %}
-
                             {% if not itp.trainer_signature %}
                                 <input type="hidden" name="update_signature">
                                 <div class="form-check form-check-inline">
-                                    <input class="form-check-input" type="checkbox" id="signoffCheckbox{{ itp.itp_id }}">
-                                    <label class="form-check-label" for="signoffCheckbox{{ itp.itp_id }}"> </label>
+                                    <label>
+                                        <input name="clicked_box" class="form-check-input" type="checkbox" value="{{ itp.itp_id }}">
+                                    </label>
                                 </div>
 
                                 <input type="hidden" name="itp" value="{{ itp.itp_id }}">
                                 <button type="submit" class="btn btn-primary btn-sm">Confirm</button>
                             {% else%}
-                                <span class="badge bg-success">Signed</span>
+                                {% if itp.trainer_initials %}
+                                    <span class="badge bg-success">{{ itp.trainer_initials }}</span>
+                                {% else %}
+                                    <span class="badge bg-success">Signed</span>
+                                {% endif %}
                             {% endif %}
                         </form>
                     </td>
@@ -88,13 +85,4 @@
         </tbody>
     </table>
 </div>
-<script>
-    document.addEventListener('DOMContentLoaded', function(){
-        const messageContainer = document.getElementById('message_container');
-        if ( messageContainer ){
-            setTimeout(function (){
-                messageContainer.style.display = 'none';
-            }, 3000)
-        }
-    });
-</script>
+{% endblock %}

@@ -62,7 +62,7 @@ class Workcenter(models.Model):
 
 class Users(models.Model):
     profile_id = models.AutoField(primary_key=True)
-    user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='profile', null=True)
+    user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='profile', null=False)
 
     name = models.CharField(max_length=100)
     skill_level = models.IntegerField(choices=[(3, "Apprentice"), (5, "Journeyman"), (7, "Craftsman"), (9, "Superintendent")])
@@ -114,8 +114,8 @@ class MTL(models.Model):
 
 class ITP(models.Model):
     itp_id = models.AutoField(primary_key=True)
-    trainee = models.ForeignKey('Users', on_delete=models.SET_NULL, null=True, related_name='trainee_itps')
-    trainer = models.ForeignKey('Users', on_delete=models.SET_NULL, related_name='itp_trainer_set', blank=True, null=True)
+    trainee = models.ForeignKey('Users', on_delete=models.PROTECT, related_name='trainee_itps')
+    trainer = models.ForeignKey('Users', on_delete=models.PROTECT, related_name='itp_trainer_set')
     mtl = models.ForeignKey('MTL', models.DO_NOTHING, null=True)
     start_date = models.DateField(blank=True, null=True)
     completion_date = models.DateField(blank=True, null=True)
@@ -125,6 +125,41 @@ class ITP(models.Model):
     class Meta:
         managed = True
         db_table = 'ITP'
+
+    @staticmethod
+    def _get_name_initials(full_name):
+            parts = full_name.strip().split()
+            num_splits = len(parts)
+            first_name = parts[0]
+            first_name_initial = first_name[0]
+            if num_splits == 2:
+                last_name = parts[1]
+                last_name_initial = last_name[0]
+                return (first_name_initial + last_name_initial).upper()
+            elif num_splits == 3:
+                middle_name = parts[1]
+                last_name = parts[2]
+                middle_name_initial = middle_name[0]
+                last_name_initial = last_name[0]
+                return (first_name_initial + middle_name_initial + last_name_initial).upper()
+            else:
+                return full_name
+
+    @property
+    def trainer_initials(self):
+        if self.trainer and self.trainer.name:
+            full_name = self.trainer.name
+            initials = self._get_name_initials(full_name)
+            return initials
+        return None
+
+    @property
+    def trainee_initials(self):
+        if self.trainee and self.trainee.name:
+            full_name = self.trainee.name
+            initials = self._get_name_initials(full_name)
+            return initials
+        return None
 
     def __str__(self):
         return (f"{self.trainee.name} -- {self.mtl.workcenter.workcenter_name} -- {self.mtl.cfetp.task_number} -- {self.mtl.cfetp.cfetp_name}"

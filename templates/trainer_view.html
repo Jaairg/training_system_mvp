@@ -46,7 +46,7 @@
             {% elif active_tab == 'trainee_itp' %}
                 {% include 'tabs/itp_tab.html' %}
             {% elif active_tab == 'my_itps' %}
-                {% if trainer_itp_exist %}
+                {% if trainee_itps_as_trainer_exists %}
                     {% include 'tabs/trainee_itp_tab.html' %}
                 {% else %}
                     <h2> You don't have current ITPs</h2>

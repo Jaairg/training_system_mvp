@@ -5,6 +5,24 @@ from django.shortcuts import render, redirect
 from core.forms import *
 from datetime import datetime
 
+def custom_redirect_view(request):
+    if request.user.is_authenticated:
+        profile_role = request.user.profile.role.role_name #Check the role of the user request
+        if profile_role == "Trainee":
+            return redirect('trainee_view') # If user is Trainee and trying to access this redirects to my_itps path
+        elif profile_role == "Trainer":
+            return redirect('trainer_view') # If user is Trainer and trying to access this redirects to trainer path
+        else:
+            return redirect('supervisor_view')
+    else:
+        return redirect('login')
+
+def tabs_redirect(valid_tabs, request):
+    tab = request.GET.get('tab', 'dashboard') # Dashboard is the default page
+    if tab not in valid_tabs:
+        tab ='dashboard'
+    return tab
+
 def redirect_to_custom_page(profile, trainee_id):
     profile_role = profile.role.role_name
     if profile_role == "Trainer":
@@ -13,15 +31,88 @@ def redirect_to_custom_page(profile, trainee_id):
         return redirect(f'/supervisor/?tab=trainee_itp&user_id={trainee_id}')
     return HttpResponse("Unauthorized", status=401)
 
-def sign_itp(itp_id, profile, trainee_id):
-    itp = ITP.objects.get(pk=itp_id)  # Identify the specific ITP being updated
-    if profile == itp.trainer:  # Securing the action so only the trainer can sign
-        itp.trainer_signature = True  # Updates the trainer_signature value once the checkbox is marked
-        if not itp.completion_date:
-            itp.completion_date = datetime.now()
-        itp.save()  # Commit the information to the database
+def redirect_to_my_itps(profile):
+    profile_role = profile.role.role_name
+    if profile_role == "Trainee":
+        return redirect("/trainee/?tab=my_itps")
+    elif profile_role == "Trainer":
+        return redirect("/trainer/?tab=my_itps")  # Redirect to trainer dashboard once form it's saved
+    elif profile_role == "Supervisor":
+        return redirect("/supervisor/?tab=my_itps")
+    return HttpResponse("Unauthorized", status=401)
+
+def get_trainee_itp(request, profile):
+    trainee_itp = None
+    trainee = None
+    try:
+        trainee_id = int(request.GET.get('user_id'))
+    except (TypeError, ValueError):
+        trainee_id = None
+    if trainee_id is not None:
+        trainee = Users.objects.filter(pk=trainee_id).first()
+        if trainee:
+            trainee_itp=ITP.objects.filter(trainer=profile, trainee__profile_id=trainee.profile_id)
+    return trainee, trainee_itp, trainee_id
+
+def validate_trainee_itp(request, profile):
+    trainee, trainee_itp, trainee_id = get_trainee_itp(request, profile)
+    if 'user_id' in request.GET:
+        if trainee_id is None:
+            return HttpResponse("Invalid or missing trainee ID.", status=400)
+        if not trainee or not trainee_itp:
+            return HttpResponse("Trainee or ITP not found.", status=400)
+    return trainee, trainee_itp, trainee_id
+
+def sign_itp(request, profile, trainee_id):
+    try:
+        itp_id = int(request.POST.get('itp'))  # Get the submitted ITP ID
+    except(TypeError, ValueError):
+        messages.error(request, "An error occurred getting the ITP.")
         return redirect_to_custom_page(profile, trainee_id)
-    return None
+    clicked_box = request.POST.get('clicked_box')
+    if clicked_box == str(itp_id):
+        itp = ITP.objects.filter(pk=itp_id).first()  # Identify the specific ITP being updated
+        if not itp:
+            messages.error(request, "An error occurred getting the ITP information.")
+            return redirect_to_custom_page(profile, trainee_id)
+        if profile == itp.trainer:  # Securing the action so only the trainer can sign
+            itp.trainer_signature = True  # Updates the trainer_signature
+            itp.completion_date = datetime.now() # Set the date time when the task was confirmed
+            itp.save()  # Commit the information to the database
+            messages.success(request, "Task successfully signed off.")
+            return redirect_to_custom_page(profile, trainee_id)
+        else:
+            return HttpResponseForbidden("You are not authorized to sign off the current trainee", status=403)
+    else:
+        messages.error(request, "You must select the box to sign off the task")
+        return redirect_to_custom_page(profile, trainee_id)
+
+def get_trainee_signature(request, profile):
+    try:
+        itp_id = int(request.POST.get('itp'))
+    except(TypeError, ValueError):
+        messages.error(request, "The record couldn't been retrieved because the ITP may not exist")
+        return redirect_to_my_itps(profile)
+    clicked_box = request.POST.get('clicked_box')
+    if clicked_box == str(itp_id):
+        itp = ITP.objects.filter(pk=itp_id).first()
+        if not itp:
+            messages.error(request, "The ITP record does not exist")
+            return redirect_to_my_itps(profile)
+        if profile == itp.trainee:
+            if itp.trainer_signature:  # If trainer signature in the form received is true will allow to update the trainee signature
+                itp.trainee_signature = True
+                itp.save()
+                messages.success(request, "You have successfully confirmed the task completion.")
+                return redirect_to_my_itps(profile)
+            else:
+                messages.error(request, "Your assigned trainer haven't signed off the task yet")
+                return redirect_to_my_itps(profile)
+        else:
+            return HttpResponseForbidden("You are not authorized to confirm this task completion", status=403)
+    else:
+        messages.error(request, "You must select the box to sign off the task")
+        return redirect_to_my_itps(profile)
 
 def update_start_date(request, profile, trainee_id):
     try:
@@ -50,39 +141,9 @@ def update_start_date(request, profile, trainee_id):
     else:
         return HttpResponseForbidden("You are not authorized to update the date", status=403)
 
-def tabs_redirect(valid_tabs, request):
-    tab = request.GET.get('tab', 'dashboard') # Dashboard is the default page
-    if tab not in valid_tabs:
-        tab ='dashboard'
-    return tab
-
-def get_trainee_itp(request, profile):
-    trainee_itp = None
-    trainee = None
-    try:
-        trainee_id = int(request.GET.get('user_id'))
-    except (TypeError, ValueError):
-        trainee_id = None
-    if trainee_id is not None:
-        trainee = Users.objects.filter(pk=trainee_id).first()
-        if trainee:
-            trainee_itp=ITP.objects.filter(trainer=profile, trainee__profile_id=trainee.profile_id)
-    return trainee, trainee_itp, trainee_id
-
-def validate_trainee_itp(request, profile):
-    trainee, trainee_itp, trainee_id = get_trainee_itp(request, profile)
-    if 'user_id' in request.GET:
-        if trainee_id is None:
-            return HttpResponse("Invalid or missing trainee ID.", status=400)
-        if not trainee or not trainee_itp:
-            return HttpResponse("Trainee or ITP not found.", status=400)
-    return trainee, trainee_itp, trainee_id
-
 @login_required
 def trainee_view(request):
     profile = request.user.profile  # get the linked Users record
-
-    trainee_itps = ITP.objects.filter(trainee=profile)  # only ITPs where this user is the trainee
 
     profile_role = profile.role.role_name
     if profile_role != 'Trainee':
@@ -91,19 +152,15 @@ def trainee_view(request):
     valid_tabs =['dashboard', 'my_itps']
     tab = tabs_redirect(valid_tabs, request)
 
-    if request.method == "POST":
-        itp_id = request.POST.get('itp')
-        itp = ITP.objects.get(itp_id=itp_id)
-        if profile == itp.trainee:
-            if itp.trainer_signature: # If trainer signature in the form received is true will allow to update the trainee signature
-                itp.trainee_signature = True
-                itp.save()
-                return redirect("/trainee/?tab=my_itps")
+    trainee_itps = ITP.objects.filter(trainee=profile)  # only ITPs where this user is the trainee
+
+    if 'set_trainee_signature' in request.POST:
+        return get_trainee_signature(request, profile)
 
     return render(request, 'trainee_view.html', {
         'profile': profile,
         'active_tab': tab,
-        'itps': trainee_itps,
+        'itps': trainee_itps
     })
 
 @login_required
@@ -116,8 +173,10 @@ def trainer_view(request):
 
     trainees_list = Users.objects.filter(profile_id__in=ITP.objects.filter(trainer=profile).values_list('trainee_id', flat=True))
 
-    trainer_itp_exist = ITP.objects.filter(trainee=profile).exists() # It checks if the current user  (profile) is listed as trainee in any ITP
-    trainer_itps = ITP.objects.filter(trainee=profile) # Get the trainer ITPs
+    trainee_itps_as_trainer = ITP.objects.filter(trainee=profile)# It checks if the current user  (profile) is listed as trainee in any ITP
+    if trainee_itps_as_trainer.exists():
+        if 'set_trainee_signature' in request.POST:
+            return get_trainee_signature(request, profile)
 
     result = validate_trainee_itp(request, profile)
     if isinstance(result, HttpResponse):
@@ -128,8 +187,7 @@ def trainer_view(request):
     tab = tabs_redirect(valid_tabs, request)
 
     if 'update_signature' in request.POST:
-        itp_id = request.POST.get('itp') # Get the submitted ITP ID
-        return sign_itp(itp_id, profile, trainee_id)
+        return sign_itp(request, profile, trainee_id)
 
     if 'update_start_date' in request.POST:
         return update_start_date(request, profile, trainee_id)
@@ -137,8 +195,8 @@ def trainer_view(request):
     return render(request, 'trainer_view.html',{
         'active_tab': tab,
         'profile': profile,
-        'trainer_itp_exist': trainer_itp_exist,
-        'itps': trainer_itps,
+        'trainee_itps_as_trainer_exists': trainee_itps_as_trainer.exists(),
+        'itps': trainee_itps_as_trainer,
         'my_trainees_list': trainees_list,
         'trainee_itp': trainee_itp,
         'trainee': trainee
@@ -162,14 +220,16 @@ def supervisor_view(request):
         return result
     trainee, trainee_itp, trainee_id = result
 
-    supervisor_itp_exist = ITP.objects.filter(trainee=profile).exists()
-    supervisor_itps = ITP.objects.filter(trainee=profile)
+    trainee_itps_as_supervisor = ITP.objects.filter(trainee=profile)
+    if trainee_itps_as_supervisor.exists():
+        if 'trainee_signature' in request.POST:
+            return get_trainee_signature(request, profile)
+
     workcenter_members = Users.objects.filter(workcenter=profile.workcenter).exclude(pk=profile.pk)
     workcenter_mtl = MTL.objects.filter(workcenter=profile.workcenter)
 
     if 'update_signature' in request.POST:
-        itp_id = request.POST.get('itp') # Get the submitted ITP ID
-        return sign_itp(itp_id, profile, trainee_id)
+        return sign_itp(request, profile, trainee_id)
 
     if 'update_start_date' in request.POST:
         return update_start_date(request, profile, trainee_id)
@@ -180,23 +240,11 @@ def supervisor_view(request):
         'my_trainees_list': trainees_list,
         'trainee_itp': trainee_itp,
         'trainee': trainee,
-        'supervisor_itp_exists': supervisor_itp_exist,
-        'itps': supervisor_itps,
+        'trainee_itps_as_supervisor_exists': trainee_itps_as_supervisor.exists(),
+        'itps': trainee_itps_as_supervisor,
         'workcenter_members' : workcenter_members,
         'workcenter_tasks' : workcenter_mtl
     })
-
-def custom_redirect_view(request):
-    if request.user.is_authenticated:
-        profile_role = request.user.profile.role.role_name #Check the role of the user request
-        if profile_role == "Trainee":
-            return redirect('trainee_view') # If user is Trainee and trying to access this redirects to my_itps path
-        elif profile_role == "Trainer":
-            return redirect('trainer_view') # If user is Trainer and trying to access this redirects to trainer path
-        else:
-            return redirect('supervisor_view')
-    else:
-        return redirect('login')
 
 def create_form_view(request):
     profile = request.user.profile
