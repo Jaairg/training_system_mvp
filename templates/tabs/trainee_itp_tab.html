@@ -1,4 +1,7 @@
-    <div class = "min-vh-100 d-flex flex-column align-items-center">
+{% extends 'base.html' %}
+
+{% block header %}
+<div class = "min-vh-100 d-flex flex-column align-items-center">
         <div class="container text-center mt-5">
             <div class="card">
                 <div class="card-body p-3 mb-5 rounded">
@@ -8,7 +11,9 @@
                 </div>
             </div>
         </div>
+{% endblock %}
 
+{% block content %}
     <!--Using Bootstrap styled tables to display records-->
     <table class = "table table-bordered table-striped">
         <thead>
@@ -19,7 +24,7 @@
                 <th scope="col">Task</th>
                 <th scope="col">Start date</th>
                 <th scope="col">Completion date</th>
-                <th scope="col">Trainee Signature</th>
+                <th scope="col">Your Signature</th>
             </tr>
         </thead>
         <tbody>
@@ -34,10 +39,10 @@
                     <!-- Show completion date or 'In Progress' if not completed -->
                     <td>
                         {% if itp.trainer_signature and itp.trainee_signature == False %}
-                            <span class="badge bg-success">Trainer signed task</span>
+                            <span class="badge bg-success">Trainer signed off task</span>
                             <p><span class="badge bg-warning text-dark">Awaiting your acknowledgment</span></p>
 
-                            {% elif itp.trainer_signature and   itp.trainee_signature == True %}
+                            {% elif itp.trainer_signature and itp.trainee_signature == True %}
                              {{itp.completion_date}}
 
                             {% else %}
@@ -47,17 +52,22 @@
                         <form method="POST">
                             {% csrf_token %}
 
-                            {% if itp.trainee_signature == False and itp.trainer_signature == True%}
+                            {% if not itp.trainee_signature and itp.trainer_signature%}
+                                <input type="hidden" name="set_trainee_signature">
                                 <div class="form-check form-check-inline">
-                                    <input class="form-check-input" type="checkbox" id="signoffCheckbox{{ itp.itp_id }}" required>
-                                    <label class="form-check-label" for="signoffCheckbox{{ itp.itp_id }}"> </label>
+                                    <label>
+                                        <input name="clicked_box" class="form-check-input" type="checkbox" value="{{ itp.itp_id }}">
+                                    </label>
                                 </div>
 
                                 <input type="hidden" name="itp" value="{{ itp.itp_id }}">
                                 <button type="submit" class="btn btn-primary btn-sm">Confirm</button>
-
-                            {% elif itp.trainee_signature == True%}
-                                <span class="badge bg-success">Completed</span>
+                            {% elif itp.trainee_signature %}
+                                {% if itp.trainee_initials %}
+                                    <span class="badge bg-success">{{ itp.trainee_initials }}</span>
+                                {% else %}
+                                    <span class="badge bg-success">Signed</span>
+                                {% endif %}
                             {% endif %}
                         </form>
                     </td>
@@ -65,4 +75,5 @@
             {% endfor %}
         </tbody>
     </table>
-    </div>
+</div>
+{% endblock %}

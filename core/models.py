@@ -126,27 +126,40 @@ class ITP(models.Model):
         managed = True
         db_table = 'ITP'
 
+    @staticmethod
+    def _get_name_initials(full_name):
+            parts = full_name.strip().split()
+            num_splits = len(parts)
+            first_name = parts[0]
+            first_name_initial = first_name[0]
+            if num_splits == 2:
+                last_name = parts[1]
+                last_name_initial = last_name[0]
+                return (first_name_initial + last_name_initial).upper()
+            elif num_splits == 3:
+                middle_name = parts[1]
+                last_name = parts[2]
+                middle_name_initial = middle_name[0]
+                last_name_initial = last_name[0]
+                return (first_name_initial + middle_name_initial + last_name_initial).upper()
+            else:
+                return full_name
+
     @property
     def trainer_initials(self):
         if self.trainer and self.trainer.name:
-            name = self.trainer.name.split(" ")
-            num_splits = len(name)
-            first_name = name[0].strip()
-            first_name_initial = first_name[0]
-            if num_splits == 2:
-                last_name = name[1].strip()
-                last_name_initial = last_name[0]
-                return first_name_initial + last_name_initial
-            elif num_splits == 3:
-                middle_name = name[1].strip()
-                last_name = name[2].strip()
-                middle_name_initial = middle_name[0]
-                last_name_initial = last_name[0]
-                return first_name_initial + middle_name_initial + last_name_initial
-            else:
-                return self.trainer.name
-        else:
-            return None
+            full_name = self.trainer.name
+            initials = self._get_name_initials(full_name)
+            return initials
+        return None
+
+    @property
+    def trainee_initials(self):
+        if self.trainee and self.trainee.name:
+            full_name = self.trainee.name
+            initials = self._get_name_initials(full_name)
+            return initials
+        return None
 
     def __str__(self):
         return (f"{self.trainee.name} -- {self.mtl.workcenter.workcenter_name} -- {self.mtl.cfetp.task_number} -- {self.mtl.cfetp.cfetp_name}"

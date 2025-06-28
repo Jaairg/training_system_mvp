@@ -1,3 +1,6 @@
+{% extends 'base.html' %}
+
+{% block header %}
 <div class = "min-vh-100 d-flex flex-column align-items-center">
     <div class="container text-center mt-5">
         <div class="card">
@@ -8,19 +11,9 @@
             </div>
         </div>
     </div>
+{% endblock %}
 
-{% if messages %}
-    <div id="message_container">
-        {% for message in messages %}
-            {% if message.tags == 'error' %}
-                <span class="badge bg-danger">{{ message }}</span>
-            {% else %}
-                <span class="badge bg-success">{{ message }}</span>
-            {% endif %}
-        {% endfor %}
-    </div>
-{% endif %}
-
+{% block content %}
     <table class = "table table-bordered table-striped">
         <thead>
             <tr>
@@ -72,7 +65,7 @@
                                 <input type="hidden" name="update_signature">
                                 <div class="form-check form-check-inline">
                                     <label>
-                                        <input name="clicked_box" class="form-check-input" type="checkbox" value="sign_off_check_box{{ itp.itp_id }}">
+                                        <input name="clicked_box" class="form-check-input" type="checkbox" value="{{ itp.itp_id }}">
                                     </label>
                                 </div>
 
@@ -92,13 +85,4 @@
         </tbody>
     </table>
 </div>
-<script>
-    document.addEventListener('DOMContentLoaded', function(){
-        const messageContainer = document.getElementById('message_container');
-        if ( messageContainer ){
-            setTimeout(function (){
-                messageContainer.style.display = 'none';
-            }, 3000)
-        }
-    });
-</script>
+{% endblock %}
