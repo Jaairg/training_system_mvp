@@ -46,11 +46,11 @@
                     </form>
                     </td>
                     <td>
-                        {% if itp.trainer_signature and itp.trainee_signature == False %}
+                        {% if itp.trainer_signature and not itp.trainee_signature%}
                             <span class="badge bg-success">You signed</span>
                             <p><span class="badge bg-warning text-dark">Awaiting trainee acknowledgment</span></p>
 
-                        {% elif itp.trainer_signature and itp.trainee_signature == True %}
+                        {% elif itp.trainer_signature and itp.trainee_signature %}
                              {{itp.completion_date}}
 
                         {% else %}
