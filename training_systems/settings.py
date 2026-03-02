@@ -77,12 +77,8 @@ WSGI_APPLICATION = 'training_systems.wsgi.application'
 
 DATABASES = {
     'default': {
-        'ENGINE': 'django.db.backends.mysql',
-        'NAME': 'training_systems',
-        'USER': 'jair',
-        'PASSWORD': 'OCCrules123!',
-        'HOST': 'jbmdl.asuscomm.com',
-        'PORT': '3306',
+        'ENGINE': 'django.db.backends.sqlite3',
+        'NAME': BASE_DIR / 'db.sqlite3',
     }
 }
 
